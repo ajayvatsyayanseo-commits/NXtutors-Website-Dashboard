@@ -1,0 +1,68 @@
+# NXTutors dashboard — nginx routing
+#
+# The point of this file: /user/dashboard and /teacher/dashboard keep the exact
+# URLs the site has always used. nginx decides, per path, whether a request is
+# served by the Next.js dashboard or by PHP. Nothing is redirected, so bookmarks,
+# WhatsApp deep links and the login hand-off all keep working unchanged.
+#
+# It is also what makes the shared login work. Because both apps answer on one
+# host, the browser sends the site's own session cookie to the dashboard too,
+# and the dashboard forwards it to the Laravel API. There is no second login and
+# no token to keep in sync.
+#
+# Add these blocks to the existing server{} for the site, ABOVE the general
+# `location /` block that hands everything to PHP-FPM. nginx matches exact and
+# prefix locations before regex ones, so order in the file does not decide this
+# — but keeping them together makes the split obvious to whoever reads it next.
+
+# ---------------------------------------------------------------------------
+# 1. The Next.js upstream
+# ---------------------------------------------------------------------------
+upstream nxtutors_dashboard {
+    server 127.0.0.1:3000;
+    keepalive 32;
+}
+
+# ---------------------------------------------------------------------------
+# 2. Paths the dashboard owns
+# ---------------------------------------------------------------------------
+# Student app: Home, Learn, Tutors, Ask AI, Account.
+# Tutor app:   Home, Leads, Students, Studio, Growth.
+#
+# Deliberately NOT listed, so they stay with PHP:
+#   /user/profile, /user/my-plan, /user/change-password, /user/wishlist,
+#   /user/cartlist, /user/checkout, /user/order, /user/success
+#   /teacher/profile, /teacher/my-plan, /teacher/enquiry,
+#   /teacher/change-password, /teacher/wishlist
+#   /tutor/*  — the PUBLIC tutor profiles, which are a different thing from
+#               the tutor dashboard at /teacher/*
+#
+# Each entry is an exact path or a prefix. Using `=` for the two Home screens
+# means the busiest routes skip prefix scanning entirely.
+
+location = /user/dashboard  { include snippets/nxtutors-dashboard-proxy.conf; }
+location = /teacher/dashboard { include snippets/nxtutors-dashboard-proxy.conf; }
+
+location /user/learn    { include snippets/nxtutors-dashboard-proxy.conf; }
+location /user/tutors   { include snippets/nxtutors-dashboard-proxy.conf; }
+location /user/ask      { include snippets/nxtutors-dashboard-proxy.conf; }
+location /user/account  { include snippets/nxtutors-dashboard-proxy.conf; }
+
+location /teacher/leads    { include snippets/nxtutors-dashboard-proxy.conf; }
+location /teacher/students { include snippets/nxtutors-dashboard-proxy.conf; }
+location /teacher/studio   { include snippets/nxtutors-dashboard-proxy.conf; }
+location /teacher/growth   { include snippets/nxtutors-dashboard-proxy.conf; }
+
+# Next.js build output and its server actions endpoint.
+location /_next { include snippets/nxtutors-dashboard-proxy.conf; }
+
+# ---------------------------------------------------------------------------
+# 3. Everything else keeps going to PHP
+# ---------------------------------------------------------------------------
+# Including /api/dashboard/v1/*, which is Laravel: the dashboard calls it
+# server-to-server, and leaving it on PHP means one place enforces the
+# authorisation policy for both apps.
+#
+#   location / {
+#       try_files $uri $uri/ /index.php?$query_string;
+#   }

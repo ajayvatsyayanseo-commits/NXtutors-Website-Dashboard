@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    /* Inter with a real system fallback: the app has to be legible before the
+       webfont lands on a patchy 4G connection, not after. */
+    font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-canvas text-ink antialiased;
+    /* 16px body on mobile; nothing carrying data goes below 14px. */
+    font-size: 16px;
+  }
+
+  h1, h2, h3 {
+    @apply text-navy;
+  }
+
+  /* Focus is always visible. Keyboard and switch-control users navigate this
+     app too, and an invisible focus ring makes it unusable for them. */
+  :focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-accent;
+  }
+}
+
+@layer utilities {
+  /* Horizontal chip rows scroll rather than wrap on narrow screens. */
+  .scroll-row {
+    @apply -mx-4 flex gap-2 overflow-x-auto px-4 pb-1;
+    scrollbar-width: none;
+  }
+
+  .scroll-row::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,41 @@
+# Install as /etc/systemd/system/nxtutors-dashboard.service
+#
+#   systemctl daemon-reload
+#   systemctl enable --now nxtutors-dashboard
+#
+# Deploy is: git pull && npm ci && npm run build && systemctl restart
+# nxtutors-dashboard. The build must succeed before the restart — a failed build
+# leaves the previous .next in place and the running process untouched.
+
+[Unit]
+Description=NXTutors dashboard (Next.js)
+After=network.target
+# The dashboard is useless without the API it reads; starting after PHP-FPM
+# avoids a window where every request fails its /me call on boot.
+Wants=php8.3-fpm.service
+After=php8.3-fpm.service
+
+[Service]
+Type=simple
+User=nxtutors
+WorkingDirectory=/home/nxtutors/nxtutors-dashboard
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+# Loopback, not a public URL: the dashboard talks to Laravel over the local
+# interface, so the call never leaves the box and never pays for TLS twice.
+Environment=LARAVEL_ORIGIN=http://127.0.0.1:8080
+Environment=NEXT_PUBLIC_SITE_ORIGIN=https://nxtutors.com
+
+ExecStart=/usr/bin/node node_modules/next/dist/bin/next start --port 3000
+Restart=always
+RestartSec=3
+
+# A Next.js server needs no write access to anything but its own cache.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/nxtutors/nxtutors-dashboard/.next
+
+[Install]
+WantedBy=multi-user.target

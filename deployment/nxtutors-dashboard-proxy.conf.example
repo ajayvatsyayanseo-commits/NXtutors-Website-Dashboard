@@ -1,0 +1,27 @@
+# Install as /etc/nginx/snippets/nxtutors-dashboard-proxy.conf
+#
+# The proxy behaviour shared by every dashboard location. Kept in one snippet so
+# a change to header forwarding cannot land on some routes and be forgotten on
+# others.
+
+proxy_pass http://nxtutors_dashboard;
+proxy_http_version 1.1;
+
+# Cookie forwarding is the whole authentication story. The browser sends the
+# site's PHP session cookie because this is the same host; nginx passes it to
+# Next.js, which passes it to the Laravel API. Strip this and the dashboard
+# cannot tell who is asking.
+proxy_set_header Host              $host;
+proxy_set_header X-Real-IP         $remote_addr;
+proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header Upgrade           $http_upgrade;
+proxy_set_header Connection        "upgrade";
+
+# Dashboard reads are per-visitor and must never be served from a shared cache.
+proxy_cache_bypass $http_upgrade;
+proxy_no_cache 1;
+
+proxy_connect_timeout 5s;
+proxy_send_timeout    30s;
+proxy_read_timeout    30s;
