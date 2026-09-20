@@ -5,6 +5,7 @@ import type { SessionDetail } from '@/lib/types';
 import { Card, CardRow } from '@/components/ui/Card';
 import { Avatar, Pill, SectionHeading, StatusPill } from '@/components/ui/primitives';
 import { ConfirmSessionPanel } from '@/components/student/ConfirmSessionPanel';
+import { NoShowPanel } from '@/components/student/NoShowPanel';
 import { avatarUrl, dateTimeLabel, money, timeLabel } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
@@ -48,6 +49,11 @@ export default async function SessionPage({
 
       {session.can_confirm && (
         <ConfirmSessionPanel sessionId={session.id} autoConfirmsAt={session.auto_confirms_at} />
+      )}
+
+      {/* A class that was never started: the evening the family lost. */}
+      {session.status === 'scheduled' && session.starts_at && new Date(session.starts_at) < new Date() && (
+        <NoShowPanel sessionId={session.id} tutorName={session.tutor?.name} />
       )}
 
       <Card label="What was covered">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { checkInSession, checkOutSession } from '@/lib/actions';
+import { checkInSession, checkOutSession, recordFamilyNoShow, resendCheckInCode } from '@/lib/actions';
 import { Button, Chip, Pill } from '@/components/ui/primitives';
 
 /**
@@ -37,6 +37,8 @@ export function CheckInSheet({
   const [method, setMethod] = useState<'parent_otp' | 'geofence' | 'online_join' | 'manual'>(
     mode === 'online' ? 'online_join' : 'parent_otp',
   );
+  const [code, setCode] = useState('');
+  const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const methods =
@@ -46,7 +48,7 @@ export function CheckInSheet({
           {
             key: 'parent_otp' as const,
             label: 'Parent OTP',
-            hint: 'The 4-digit code the parent sees in their app or on WhatsApp.',
+            hint: 'The 4-digit code the parent has in their app. We check it here.',
           },
           {
             key: 'geofence' as const,
@@ -63,9 +65,14 @@ export function CheckInSheet({
   const submit = () => {
     setError(null);
 
+    if (method === 'parent_otp' && code.trim().length < 4) {
+      setError('Ask the family for their 4-digit code and type it in.');
+      return;
+    }
+
     const send = (coords?: { lat?: number; lng?: number; accuracy_m?: number }) =>
       startTransition(async () => {
-        const result = await checkInSession(sessionId, method, coords);
+        const result = await checkInSession(sessionId, method, coords, code.trim() || undefined);
         if (!result.ok) setError(result.message ?? 'Try again in a moment.');
       });
 
@@ -114,6 +121,39 @@ export function CheckInSheet({
         ))}
       </fieldset>
 
+      {method === 'parent_otp' && (
+        <div className="mt-3">
+          <label htmlFor="check-in-code" className="block text-sm font-medium text-ink">
+            The family&apos;s code
+          </label>
+          <input
+            id="check-in-code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={4}
+            value={code}
+            onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 4))}
+            className="mt-1 w-28 rounded-card border border-line px-3 py-2 text-lg tracking-[0.4em] text-ink"
+            placeholder="0000"
+          />
+          <button
+            type="button"
+            className="ml-3 text-sm font-medium text-accent underline"
+            onClick={() =>
+              startTransition(async () => {
+                const result = await resendCheckInCode(sessionId);
+                setNote(result.ok ? (result.message ?? 'Sent.') : null);
+                if (!result.ok) setError(result.message ?? 'We could not send it. Check in manually.');
+              })
+            }
+          >
+            Send it again
+          </button>
+        </div>
+      )}
+
+      {note && <p className="mt-3 text-sm text-slate">{note}</p>}
+
       {error && (
         <p role="alert" className="mt-3 text-sm text-danger">
           {error}
@@ -123,6 +163,65 @@ export function CheckInSheet({
       <div className="mt-4">
         <Button full disabled={pending} onClick={submit}>
           {pending ? 'Checking in…' : 'Check in'}
+        </Button>
+      </div>
+
+      <NoShowRow sessionId={sessionId} />
+    </div>
+  );
+}
+
+/**
+ * Nobody was home.
+ *
+ * A tutor who travelled to an empty house had no button at all: the class sat
+ * scheduled, the fee stayed held, and they were paid nothing. Brief 7.4 charges
+ * the family in full for it, so this asks once before it fires.
+ */
+function NoShowRow({ sessionId }: { sessionId: string }) {
+  const [pending, startTransition] = useTransition();
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!confirming) {
+    return (
+      <button
+        type="button"
+        className="mt-3 text-sm font-medium text-slate underline"
+        onClick={() => setConfirming(true)}
+      >
+        Nobody was home
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-card border border-line p-3">
+      <p className="text-sm text-ink">
+        Record this class as a family no-show? You are paid the full fee, and the family is
+        charged for it.
+      </p>
+
+      {error && (
+        <p role="alert" className="mt-2 text-sm text-danger">
+          {error}
+        </p>
+      )}
+
+      <div className="mt-3 flex gap-2">
+        <Button
+          disabled={pending}
+          onClick={() =>
+            startTransition(async () => {
+              const result = await recordFamilyNoShow(sessionId);
+              if (!result.ok) setError(result.message ?? 'Try again in a moment.');
+            })
+          }
+        >
+          {pending ? 'Recording…' : 'Yes, nobody was home'}
+        </Button>
+        <Button tone="ghost" onClick={() => setConfirming(false)}>
+          Cancel
         </Button>
       </div>
     </div>

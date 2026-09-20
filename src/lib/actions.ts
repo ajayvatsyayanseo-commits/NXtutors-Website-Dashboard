@@ -148,15 +148,48 @@ export async function checkInSession(
   sessionId: string,
   method: 'parent_otp' | 'geofence' | 'online_join' | 'manual',
   coords?: { lat?: number; lng?: number; accuracy_m?: number },
+  code?: string,
 ): Promise<ActionResult> {
   return run(
     () =>
       api(`/tutor/sessions/${sessionId}/check-in`, {
         method: 'POST',
-        body: { method, ...coords },
+        body: { method, ...coords, ...(code ? { code } : {}) },
       }),
     ['/teacher/dashboard', '/teacher/students', `/teacher/students/session/${sessionId}`],
     'Checked in.',
+  );
+}
+
+/**
+ * Ask us to send the family their code again.
+ *
+ * The code goes to the family, never to the caller — asking for it proves
+ * nothing on its own, which is what keeps it evidence.
+ */
+export async function resendCheckInCode(sessionId: string): Promise<ActionResult> {
+  return run(
+    () => api(`/tutor/sessions/${sessionId}/check-in-code`, { method: 'POST' }),
+    [],
+    'Sent. Ask the family to read out the 4-digit code.',
+  );
+}
+
+/** The family did not turn up. The class is charged in full. */
+export async function recordFamilyNoShow(sessionId: string): Promise<ActionResult> {
+  return run(
+    () => api(`/tutor/sessions/${sessionId}/no-show`, { method: 'POST' }),
+    ['/teacher/dashboard', '/teacher/students', `/teacher/students/session/${sessionId}`],
+    'Recorded. You are paid for the class in full.',
+  );
+}
+
+/** The tutor did not turn up. The hold comes back and the pack gains a class. */
+export async function reportTutorNoShow(sessionId: string): Promise<ActionResult> {
+  return run(
+    () => api(`/sessions/${sessionId}/no-show`, { method: 'POST' }),
+    ['/user/learn', '/user/dashboard', `/user/learn/${sessionId}`],
+    'Recorded. The fee is back in your balance and the class has been added back to your pack.',
   );
 }
 
