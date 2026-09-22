@@ -93,37 +93,127 @@ be missed in the other.
 
 `app/Nxt/Dashboard/` in the Laravel repo — a self-contained module with its own
 routes, migrations and commands, in the same shape as the existing `NxtAi`
-module. 47 endpoints under `/api/dashboard/v1`, all returning
+module. 58 routes under `/api/dashboard/v1`, all returning
 `{data, meta, errors}`.
 
 Its own tables are prefixed `nxt_` — `nxt_sessions` rather than `sessions`,
 because Laravel's session store already owns that name in this database, and
 `nxt_leads` rather than `leads` so nothing collides with the legacy schema.
 
-Three commands:
+The module lives on the `feat/nxt-dashboard-backend` branch of
+`NXtutors-Website`. That branch is what production runs, but it is not merged
+into `main` yet — until it is, uploading `main` to the server removes the API.
+
+Five commands run on Laravel's scheduler, registered in `routes/console.php`,
+so nothing extra goes in cron:
+
+| Command | When | Why it matters |
+| --- | --- | --- |
+| `nxt-dashboard:relay-outbox` | every minute | Publishes money and session events. Transport is `log` until `NXT_OUTBOX_TRANSPORT` says otherwise |
+| `nxt-dashboard:auto-confirm` | every 10 min | Releases a held class fee to the tutor. Most parents never tap Confirm, so without it most tutors are never paid |
+| `nxt-dashboard:issue-check-in-codes` | every 10 min | Sends the parent's check-in code an hour before class |
+| `nxt-dashboard:reliability` | 03:30 daily | The 30-day 0–100 tutor score used to rank leads |
+| `nxt-dashboard:sweep-abandoned` | 04:00 daily | Refunds classes nobody ever closed |
+
+One manual command:
 
 ```bash
-php artisan nxt-dashboard:seed --demo   # backfill + demo working set
-php artisan nxt-dashboard:reliability   # nightly 0-100 tutor score
-php artisan nxt-dashboard:auto-confirm  # release holds after 24h
+php artisan nxt-dashboard:seed           # backfill nxt_leads from the legacy enquiry tables
+php artisan nxt-dashboard:seed --demo    # ...plus a demo working set — never on production
 ```
 
-The last two belong on the scheduler. Without `auto-confirm` the money never
-moves for the classes parents do not manually confirm, which is most of them.
+The backfill has **not** been run on production. It turns every historical
+enquiry into a fresh lead that expires in 30 days, and tutors pay credits to
+open leads, so decide on a cut-off date before running it there.
 
 ## Deploying
 
-`deployment/` holds three example files: the nginx locations, the proxy snippet
-they share, and a systemd unit. The short version:
+Live on www.nxtutors.com since 22 September 2026, on the site's AWS server,
+which is managed with CloudPanel and sits behind Cloudflare. The server hosts
+about thirty other sites, so every change stays inside the `nxtutors` site.
 
-1. `npm ci && npm run build` on the server.
-2. `systemctl enable --now nxtutors-dashboard` (port 3000, loopback only).
-3. Add the nginx blocks above the site's general `location /`.
-4. Reload nginx.
+### What runs where
 
-Paths the dashboard owns are listed explicitly, so `/user/profile`,
-`/user/checkout`, `/teacher/my-plan` and the public `/tutor/*` profiles all stay
-with PHP.
+| Piece | Where |
+| --- | --- |
+| Laravel site + dashboard API | `/home/nxtutors/htdocs/www.nxtutors.com`, PHP 8.4, FPM user `nxtutors` |
+| This app | `/home/nxtutors/nxtutors-dashboard`, Node 22 installed with nvm for the `nxtutors` user only |
+| Service | systemd `nxtutors-dashboard`, on `127.0.0.1:3020` |
+| Routing | the vhost for `www.nxtutors.com`, in CloudPanel |
+| Scheduler | `/etc/cron.d/nxtutors` runs `schedule:run` every minute (this was already in place) |
+
+Port 3020, not 3000: 3000 already belongs to another site on the box.
+`LARAVEL_ORIGIN` is `https://www.nxtutors.com` rather than loopback. Laravel's
+internal `:8080` listener picks a site by `Host`, and with many sites on one
+server a loopback call would land on the wrong one.
+
+### Updating this app
+
+```bash
+~/deploy/update-dashboard.sh                  # run as ubuntu; defaults to feat/verified-reviews, the branch production runs
+~/deploy/update-dashboard.sh some-branch
+```
+
+The script pulls, runs `npm ci` and `npm run build`, then restarts the service.
+If the build fails it stops before the restart, so the running version keeps
+serving.
+
+### Routing
+
+One `location` block in the site's vhost, above its general `location /`,
+sends exactly these paths to port 3020:
+
+```
+/user/dashboard   /user/learn   /user/tutors   /user/ask   /user/account
+/teacher/dashboard   /teacher/leads   /teacher/students   /teacher/studio   /teacher/growth
+/_next/*   /api/profile-avatar
+```
+
+Everything else stays with PHP. That includes `/user/profile`,
+`/user/checkout`, `/teacher/my-plan`, the public `/tutor/*` profiles and
+`/api/dashboard/v1/*`. The block also sets `pagespeed off;`. The site runs
+PageSpeed, and its HTML rewriting (whitespace, quotes, lazy images) breaks React
+hydration.
+
+To roll back, delete that block. `/user/dashboard` and `/teacher/dashboard` go
+back to the old Blade screens, and nothing else changes.
+
+### Things that have already caused outages
+
+- **Rebuild Laravel's config cache as `nxtutorscom`, not `nxtutors`.** `.env`
+  is owned by `nxtutorscom` with mode 600. Run as `nxtutors`, `config:cache`
+  cannot read `.env`, falls back to SQLite, and every page returns 500. Build it
+  as `nxtutorscom`, then give the file back to FPM:
+
+  ```bash
+  sudo -u nxtutorscom php8.4 artisan config:cache
+  sudo chown nxtutors:nxtutors bootstrap/cache/config.php && sudo chmod 660 bootstrap/cache/config.php
+  ```
+
+- **Change the vhost in two places.** CloudPanel keeps its own copy of every
+  vhost, in `/home/clp/htdocs/app/data/db.sq3` (`site.vhost_template`, with
+  CRLF line endings and `{{placeholders}}`). If only the file in
+  `/etc/nginx/sites-enabled/` changes, the next Save in the panel wipes the
+  dashboard routes. The simplest way is to edit it in the panel under
+  **Sites → www.nxtutors.com → Vhost**, which updates both.
+
+- **Never write a vhost file in place.** An empty vhost still passes
+  `nginx -t`, and reloading it takes the site off the internet (Cloudflare 525).
+  Build a copy, test it, then swap it in.
+
+### Backups
+
+`/home/ubuntu/deploy/backup-20260922-091216/` holds the state from before the
+first deploy: the Laravel code (`app`, `bootstrap`, `config`, `database`,
+`routes`, `.env`), a full database dump, the original vhost and CloudPanel's
+database. Take a fresh backup before each backend deploy.
+
+### The example files
+
+`deployment/` holds the original templates: nginx locations, a shared proxy
+snippet and a systemd unit. They describe a server with one site, on port 3000.
+Production differs as described above, so use them as a starting point for a
+fresh server, not as a copy of what is live.
 
 ## What is built, and what is not
 
