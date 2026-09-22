@@ -24,6 +24,7 @@ import {
   QUALIFICATION_FIELDS,
 } from '@/components/account/sections';
 import { ShareLinks } from '@/components/tutor/ShareLinks';
+import { AccountControls } from '@/components/account/AccountControls';
 import { dateLabel, money } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
@@ -547,6 +548,10 @@ async function ProfileTab({ growth }: { growth: GrowthPayload }) {
             reviewUrl={data.profile.review_url}
           />
         </Card>
+      </div>
+
+      <div id="account">
+        <AccountControls role="tutor" account={data.profile.account} />
       </div>
 
       <Card label="Signed in">

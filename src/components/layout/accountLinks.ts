@@ -34,6 +34,7 @@ export function accountLinks(role: Role, userId: string, site: string): MenuItem
         // /teacher/{id} is the review form, not the public page; both links,
         // with copy and WhatsApp buttons, live on the Profile tab.
         { label: 'Share profile and review link', href: '/teacher/growth?tab=profile#share' },
+        { label: 'Hide or delete profile', href: '/teacher/growth?tab=profile#account' },
         { label: 'Change password', href: '/teacher/growth?tab=profile' },
       ],
       [{ label: 'Sign out', href: `${site}/logout`, external: true, tone: 'danger' }],
@@ -50,6 +51,7 @@ export function accountLinks(role: Role, userId: string, site: string): MenuItem
       { label: 'Profile', href: '/user/account?tab=profile' },
       { label: 'Notifications', href: '/user/account?tab=notifications' },
       { label: 'Change password', href: '/user/account?tab=profile' },
+      { label: 'Delete account', href: '/user/account?tab=profile#account' },
     ],
     [
       { label: 'Find a tutor', href: '/user/tutors/new' },

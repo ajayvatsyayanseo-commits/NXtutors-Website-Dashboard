@@ -22,7 +22,10 @@ export function AppShell({
   unread,
   role,
   userId,
+  notice,
 }: {
+  /** Shown above every screen, e.g. a pending account deletion. */
+  notice?: ReactNode;
   children: ReactNode;
   tabs: Tab[];
   name: string | null;
@@ -51,7 +54,10 @@ export function AppShell({
         <TabBar tabs={tabs} secondary={secondary} />
 
         {/* pb-24 on mobile keeps the last card clear of the bottom tab bar */}
-        <main className="min-w-0 flex-1 pb-24 md:pb-6">{children}</main>
+        <main className="min-w-0 flex-1 pb-24 md:pb-6">
+          {notice}
+          {children}
+        </main>
       </div>
     </div>
   );

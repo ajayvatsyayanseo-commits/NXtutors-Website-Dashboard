@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/primitives';
 import { Tabs } from '@/components/ui/Tabs';
 import { PasswordSection, ProfileSection } from '@/components/account/ProfileForm';
+import { AccountControls } from '@/components/account/AccountControls';
 import { AvatarUpload } from '@/components/account/AvatarUpload';
 import { PlanGrid, type PlanOption } from '@/components/account/PlanGrid';
 import { MessageThreads, type Thread } from '@/components/account/MessageThreads';
@@ -269,6 +270,10 @@ async function ProfileTab({ me }: { me: Me }) {
       />
 
       <PasswordSection />
+
+      <div id="account">
+        <AccountControls role="student" account={data.profile.account} />
+      </div>
 
       <Card label="Your account">
         <p className="text-sm text-slate">

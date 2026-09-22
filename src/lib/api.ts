@@ -56,7 +56,7 @@ async function forwardedHeaders(): Promise<HeadersInit> {
 }
 
 type RequestOptions = {
-  method?: 'GET' | 'POST' | 'PATCH' | 'PUT';
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   body?: unknown;
   /** Seconds to cache. Dashboard reads are per-visitor, so this is off by default. */
   revalidate?: number;

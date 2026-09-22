@@ -66,7 +66,24 @@ export type Profile = {
   public_url: string | null;
   /** Tutors only: the form that asks a family for a review. */
   review_url: string | null;
+  account: AccountState;
 };
+
+/** Hide profile and delete account. */
+export type AccountState = {
+  hidden: boolean;
+  /** ISO time the profile comes back; null when visible or hidden indefinitely. */
+  hidden_until: string | null;
+  hidden_indefinitely: boolean;
+  deletion_pending: boolean;
+  /** ISO time the account is erased; null unless a deletion is pending. */
+  delete_after: string | null;
+  /** Accounts made on WhatsApp may have no password to confirm with. */
+  has_password: boolean;
+};
+
+export type HideOption = '24h' | '3d' | '7d' | 'indefinite' | 'show';
+export type DeleteOption = '24h' | '3d' | '7d';
 
 export type Me = {
   user: Profile;

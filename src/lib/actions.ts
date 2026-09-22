@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { api, ApiError } from './api';
+import type { DeleteOption, HideOption } from './types';
 
 /**
  * Every write the dashboard performs.
@@ -288,6 +289,38 @@ export async function changePassword(
       }),
     [],
     'Password changed.',
+  );
+}
+
+// -------------------------------------------------------------------- account
+
+const ACCOUNT_PAGES = ['/teacher/growth', '/teacher/dashboard', '/user/account', '/user/dashboard'];
+
+export async function setProfileVisibility(hide: HideOption): Promise<ActionResult> {
+  return run(
+    () => api('/account/visibility', { method: 'POST', body: { hide } }),
+    ACCOUNT_PAGES,
+    hide === 'show' ? 'Your profile is visible again.' : 'Your profile is hidden.',
+  );
+}
+
+export async function requestAccountDeletion(
+  after: DeleteOption,
+  confirm: string,
+  password: string,
+): Promise<ActionResult> {
+  return run(
+    () => api('/account/deletion', { method: 'POST', body: { after, confirm, password } }),
+    ACCOUNT_PAGES,
+    'Your account is scheduled for deletion.',
+  );
+}
+
+export async function cancelAccountDeletion(): Promise<ActionResult> {
+  return run(
+    () => api('/account/deletion', { method: 'DELETE' }),
+    ACCOUNT_PAGES,
+    'Deletion cancelled. Your account is back to normal.',
   );
 }
 

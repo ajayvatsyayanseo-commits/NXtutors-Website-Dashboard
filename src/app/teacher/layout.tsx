@@ -1,6 +1,7 @@
 import { requireApi } from '@/lib/api';
 import type { Me } from '@/lib/types';
 import { AppShell } from '@/components/layout/AppShell';
+import { DeletionBanner } from '@/components/account/AccountControls';
 import { CalendarIcon, HomeIcon, InboxIcon, ToolIcon, TrendIcon } from '@/components/layout/icons';
 import { redirect } from 'next/navigation';
 
@@ -34,6 +35,9 @@ export default async function TutorLayout({ children }: { children: React.ReactN
       entitlements={me.entitlements}
       unread={me.unread_notifications}
       userId={me.user.user_id}
+      notice={
+        me.user.account?.deletion_pending ? <DeletionBanner deleteAfter={me.user.account.delete_after} /> : null
+      }
     >
       {children}
     </AppShell>
