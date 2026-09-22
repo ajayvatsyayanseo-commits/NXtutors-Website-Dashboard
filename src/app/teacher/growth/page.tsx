@@ -23,6 +23,7 @@ import {
   PERSONAL_FIELDS,
   QUALIFICATION_FIELDS,
 } from '@/components/account/sections';
+import { ShareLinks } from '@/components/tutor/ShareLinks';
 import { dateLabel, money } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
@@ -299,13 +300,27 @@ function VerificationTab({ growth }: { growth: GrowthPayload }) {
   );
 }
 
-function ReviewsTab({ growth }: { growth: GrowthPayload }) {
+async function ReviewsTab({ growth }: { growth: GrowthPayload }) {
+  const { data } = await requireApi<{ profile: Profile }>('/profile');
+  const share = (
+    <Card label="Get more reviews">
+      <ShareLinks
+        name={data.profile.name}
+        publicUrl={data.profile.public_url}
+        reviewUrl={data.profile.review_url}
+      />
+    </Card>
+  );
+
   if (growth.reviews.count === 0) {
     return (
-      <EmptyState
-        title="No reviews yet."
-        body="Families can review you after four confirmed classes. Reviews come only from classes recorded in the ledger."
-      />
+      <div className="space-y-3">
+        <EmptyState
+          title="No reviews yet."
+          body="Send your review link to students and parents you teach. Each review is checked by our team before it appears on your profile."
+        />
+        {share}
+      </div>
     );
   }
 
@@ -325,10 +340,34 @@ function ReviewsTab({ growth }: { growth: GrowthPayload }) {
           {growth.reviews.items.map((review) => (
             <li key={review.id}>
               <CardRow>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-ink">{review.name ?? 'A parent'}</p>
-                  {review.message && <p className="mt-1 text-sm text-slate">{review.message}</p>}
-                  {review.date && <p className="mt-1 text-xs text-muted">{review.date}</p>}
+                <div className="flex min-w-0 gap-3">
+                  <Avatar src={review.photo_url} name={review.name} size={40} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-ink">
+                      {review.name ?? 'A parent'}
+                      {review.email_verified && (
+                        <span className="ml-2 align-middle">
+                          <Pill tone="ok">Verified email</Pill>
+                        </span>
+                      )}
+                    </p>
+                    {review.context && <p className="mt-1 text-xs text-slate">{review.context}</p>}
+                    {review.message && (
+                      <p className="mt-1 whitespace-pre-line text-sm text-slate">{review.message}</p>
+                    )}
+                    {review.tags.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {review.tags.map((tag) => (
+                          <Pill key={tag}>{tag}</Pill>
+                        ))}
+                      </div>
+                    )}
+                    <p className="mt-2 text-xs text-muted">
+                      Expertise {review.expertise || '—'} · Patience {review.patience || '—'} ·
+                      Reliability {review.reliability || '—'} · Communication {review.communication || '—'}
+                      {review.date && ` · ${review.date}`}
+                    </p>
+                  </div>
                 </div>
                 <Pill tone="accent">{review.rating}/5</Pill>
               </CardRow>
@@ -336,6 +375,8 @@ function ReviewsTab({ growth }: { growth: GrowthPayload }) {
           ))}
         </ul>
       </Card>
+
+      {share}
     </div>
   );
 }
@@ -498,21 +539,15 @@ async function ProfileTab({ growth }: { growth: GrowthPayload }) {
         </p>
       </Card>
 
-      <Card label="Share your profile">
-        <p className="text-sm text-slate">
-          Your public page is what a family sees before they have an account. Send it to anyone
-          asking for a tutor, and ask families you already teach for a review — verified reviews are
-          the single thing that moves a card in the listings.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <ButtonLink href={`${site}/teacher/${data.profile.user_id}`} tone="secondary" external>
-            Open your public page
-          </ButtonLink>
-          <ButtonLink href={`${site}/teacher/${data.profile.user_id}`} tone="ghost" external>
-            Ask for a review
-          </ButtonLink>
-        </div>
-      </Card>
+      <div id="share">
+        <Card label="Share your profile">
+          <ShareLinks
+            name={data.profile.name}
+            publicUrl={data.profile.public_url}
+            reviewUrl={data.profile.review_url}
+          />
+        </Card>
+      </div>
 
       <Card label="Signed in">
         <p className="text-sm text-slate">

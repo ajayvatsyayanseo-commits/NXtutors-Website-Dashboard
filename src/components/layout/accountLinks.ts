@@ -31,7 +31,9 @@ export function accountLinks(role: Role, userId: string, site: string): MenuItem
         { label: 'Reviews', href: '/teacher/growth?tab=reviews' },
       ],
       [
-        { label: 'Share your public page', href: `${site}/teacher/${userId}`, external: true },
+        // /teacher/{id} is the review form, not the public page; both links,
+        // with copy and WhatsApp buttons, live on the Profile tab.
+        { label: 'Share profile and review link', href: '/teacher/growth?tab=profile#share' },
         { label: 'Change password', href: '/teacher/growth?tab=profile' },
       ],
       [{ label: 'Sign out', href: `${site}/logout`, external: true, tone: 'danger' }],

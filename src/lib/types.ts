@@ -62,6 +62,10 @@ export type Profile = {
   document_number: string | null;
   status: string | null;
   joined_on: string | null;
+  /** Tutors only: the public profile families browse. Null without a city. */
+  public_url: string | null;
+  /** Tutors only: the form that asks a family for a review. */
+  review_url: string | null;
 };
 
 export type Me = {
@@ -489,6 +493,11 @@ export type GrowthPayload = {
       communication: number;
       message: string | null;
       date: string | null;
+      photo_url: string | null;
+      email_verified: boolean;
+      /** "Parent · Class 12 · ISC · Physics · Home tuition" */
+      context: string | null;
+      tags: string[];
     }>;
   };
   plan: Entitlements;
