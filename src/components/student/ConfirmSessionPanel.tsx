@@ -18,13 +18,19 @@ const REASONS = [
  * The deadline is shown rather than left implicit because silence here moves
  * money: at 24 hours the class auto-confirms and the tutor is paid. A parent
  * has to know that before it happens, not after.
+ *
+ * A manual check-in (no family code) never confirms on silence, so there is no
+ * deadline to show — instead the family is told their answer is the only
+ * proof the class happened.
  */
 export function ConfirmSessionPanel({
   sessionId,
   autoConfirmsAt,
+  needsYourConfirmation = false,
 }: {
   sessionId: string;
   autoConfirmsAt: string | null;
+  needsYourConfirmation?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [mode, setMode] = useState<'idle' | 'disputing'>('idle');
@@ -112,10 +118,17 @@ export function ConfirmSessionPanel({
   return (
     <div className="rounded-card border border-warn/40 bg-white p-4">
       <p className="text-sm font-semibold text-ink">Did this class happen as recorded?</p>
-      {deadline && (
+      {needsYourConfirmation ? (
         <p className="mt-1 text-sm text-slate">
-          If you do nothing, it confirms automatically on {deadline} and your tutor is paid for it.
+          Your tutor checked in without the class code, so only you can confirm this class took
+          place. It will not be paid until you confirm it or our team checks with you.
         </p>
+      ) : (
+        deadline && (
+          <p className="mt-1 text-sm text-slate">
+            If you do nothing, it confirms automatically on {deadline} and your tutor is paid for it.
+          </p>
+        )
       )}
 
       {error && (

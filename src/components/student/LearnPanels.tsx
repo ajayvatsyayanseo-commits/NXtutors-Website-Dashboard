@@ -35,9 +35,10 @@ export function SessionsPanel({ sessions }: { sessions: SessionDetail[] }) {
         <Card label="Waiting for you" tone="warn">
           <p className="text-sm text-ink">
             {confirmable.length} class{confirmable.length === 1 ? '' : 'es'} finished and{' '}
-            {confirmable.length === 1 ? 'is' : 'are'} waiting for you to confirm. If you do nothing,
-            {' '}
-            {confirmable.length === 1 ? 'it' : 'they'} auto-confirm 24 hours after the class ended.
+            {confirmable.length === 1 ? 'is' : 'are'} waiting for you to confirm.{' '}
+            {confirmable.some((s) => s.needs_your_confirmation)
+              ? 'Classes checked in with your code confirm automatically 24 hours after they end; the others wait for your answer.'
+              : `If you do nothing, ${confirmable.length === 1 ? 'it' : 'they'} auto-confirm 24 hours after the class ended.`}
           </p>
         </Card>
       )}

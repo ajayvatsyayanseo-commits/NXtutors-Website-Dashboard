@@ -48,7 +48,11 @@ export default async function SessionPage({
       />
 
       {session.can_confirm && (
-        <ConfirmSessionPanel sessionId={session.id} autoConfirmsAt={session.auto_confirms_at} />
+        <ConfirmSessionPanel
+          sessionId={session.id}
+          autoConfirmsAt={session.auto_confirms_at}
+          needsYourConfirmation={session.needs_your_confirmation ?? false}
+        />
       )}
 
       {/* A class that was never started: the evening the family lost. */}

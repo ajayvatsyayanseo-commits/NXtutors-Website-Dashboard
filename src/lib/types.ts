@@ -145,6 +145,8 @@ export type SessionDetail = SessionCard & {
   confirmed_at: string | null;
   can_confirm: boolean;
   auto_confirms_at: string | null;
+  /** Manual check-in: never confirms on silence, only the family's answer settles it. */
+  needs_your_confirmation?: boolean;
   events?: Array<{
     kind: string;
     method: string | null;
